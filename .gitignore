@@ -62,3 +62,7 @@ Thumbs.db
 
 # .pi
 .pi/
+
+*.db
+*.log
+*.swp
