@@ -1,12 +1,56 @@
 services:
-  dev-env:
+  # Infrastructure Sibling
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    volumes:
+      - /mnt/c/projects/data:/data
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    networks:
+      - app-network
+
+  # Runtime Sibling: Backend
+  backend:
     build: .
-    container_name: pi-vibe-env
+    working_dir: /workspace/backend
+    command: ["uv", "run", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
     volumes:
       - .:/workspace
-      - ./.pi:/home/pi/.pi
     ports:
       - "8000:8000"
-      - "5173:5173"
-    env_file:
-      - .env
+    environment:
+      - MINIO_ENDPOINT=minio:9000
+    networks:
+      - app-network
+
+  # Runtime Sibling: Frontend
+  frontend:
+    build: .
+    working_dir: /workspace/frontend
+    command: ["npm", "run", "dev", "--", "--host", "0.0.0.0", "--port", "5174"]
+    volumes:
+      - .:/workspace
+    ports:
+      - "5174:5174"
+    networks:
+      - app-network
+
+  # Your Persistent Dev-Shell (The Sidecar)
+  pi-dev:
+    build: .
+    volumes:
+      - .:/workspace
+    tty: true
+    networks:
+      - app-network
+    environment:
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+
+networks:
+  app-network:
+    driver: bridge

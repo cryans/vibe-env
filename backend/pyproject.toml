@@ -1,11 +1,13 @@
 [project]
-name = "transcript-extractor"
+name = "backend"
 version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.11"
 dependencies = [
-    "youtube-transcript-api>=0.6.2",
-    "yt-dlp>=2026.05.01",
+    "fastapi>=0.136.3",
+    "llm>=0.31",
+    "llm-gemini>=0.32",
+    "pydantic>=2.13.4",
+    "uvicorn>=0.48.0",
 ]
-
-[build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"

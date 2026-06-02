@@ -1,4 +1,8 @@
 .env
+models.json
+backend/logs.jsonl
+backend/backend/logs.jsonl
+*.jsonl
 
 # --- Python ---
 # Byte-compiled / optimized / DLL files
@@ -56,3 +60,5 @@ out/
 .DS_Store
 Thumbs.db
 
+# .pi
+.pi/
