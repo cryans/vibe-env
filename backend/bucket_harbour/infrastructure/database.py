@@ -2,7 +2,7 @@ import os
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from src.domain.models import Base
+from bucket_harbour.domain.models import Base
 
 # Agnostic configuration, but defaulting to a local SQLite database for development
 METADATA_DB_PATH = os.environ.get("METADATA_DB_PATH", "sqlite:///metadata.db")

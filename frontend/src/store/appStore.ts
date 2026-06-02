@@ -17,7 +17,7 @@ export interface SessionInfo {
   title?: string;
 }
 
-export type ViewMode = 'direct_chat' | 'pidev_sessions' | 'pidev_session_detail' | 'models';
+export type ViewMode = 'direct_chat' | 'pidev_sessions' | 'pidev_session_detail' | 'models' | 's3_facade';
 
 export interface ModelConfig {
   model_id: string;
@@ -49,9 +49,11 @@ interface AppState {
   activePiDevSessionDetail: SessionDetailItem[] | null;
   currentDirectChatMessages: Message[];
   currentDirectChatSessionId: string;
+  alertMessage: string | null;
 }
 
 interface AppActions {
+  setAlertMessage: (message: string | null) => void;
   // UI / Navigation Actions
   toggleSidebar: () => void;
   setViewMode: (mode: ViewMode) => void;
@@ -91,8 +93,10 @@ export const useAppStore = create<AppState & AppActions>((set, get) => ({
   activePiDevSessionDetail: null,
   currentDirectChatMessages: [],
   currentDirectChatSessionId: crypto.randomUUID(),
+  alertMessage: null,
 
   // --- Actions ---
+  setAlertMessage: (message) => set({ alertMessage: message }),
   toggleSidebar: () => set((state) => ({ isSidebarOpen: !state.isSidebarOpen })),
   setViewMode: (mode) => set({ viewMode: mode }),
 
@@ -153,7 +157,7 @@ export const useAppStore = create<AppState & AppActions>((set, get) => ({
       set({ viewMode: 'direct_chat' });
     } catch (e) {
       console.error(e);
-      alert('Failed to load direct chat session.');
+      get().setAlertMessage('Failed to load direct chat session.');
     }
   },
 
@@ -179,7 +183,7 @@ export const useAppStore = create<AppState & AppActions>((set, get) => ({
       set({ viewMode: 'pidev_session_detail' });
     } catch (e) {
       console.error(e);
-      alert('Failed to load PiDev session detail.');
+      get().setAlertMessage('Failed to load PiDev session detail.');
     }
   },
 
@@ -196,7 +200,7 @@ export const useAppStore = create<AppState & AppActions>((set, get) => ({
       await get().refreshModelsConfig();
     } catch (e) {
       console.error('Failed to add model', e);
-      alert('Failed to add model. Check if it already exists.');
+      get().setAlertMessage('Failed to add model. Check if it already exists.');
     }
   },
 
@@ -211,7 +215,7 @@ export const useAppStore = create<AppState & AppActions>((set, get) => ({
       await get().refreshModelsConfig();
     } catch (e) {
       console.error('Failed to update model', e);
-      alert('Failed to update model.');
+      get().setAlertMessage('Failed to update model.');
     }
   },
 
@@ -221,7 +225,7 @@ export const useAppStore = create<AppState & AppActions>((set, get) => ({
       await get().refreshModelsConfig();
     } catch (e) {
       console.error('Failed to delete model', e);
-      alert('Failed to delete model.');
+      get().setAlertMessage('Failed to delete model.');
     }
   },
 
@@ -231,7 +235,7 @@ export const useAppStore = create<AppState & AppActions>((set, get) => ({
       await get().refreshModelsConfig();
     } catch (e) {
       console.error('Failed to select model', e);
-      alert('Failed to select model.');
+      get().setAlertMessage('Failed to select model.');
     }
   },
 }));

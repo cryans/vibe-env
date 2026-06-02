@@ -1,6 +1,7 @@
 import React from 'react';
 import { Wrench } from 'lucide-react';
 import type { ModelConfig } from '../store/appStore';
+import { useAppStore } from '../store/appStore';
 
 interface ModelConfigEditorProps {
   model: ModelConfig;
@@ -17,6 +18,8 @@ const ModelConfigEditor: React.FC<ModelConfigEditorProps> = ({
   onCancelEdit,
   onSaveEdit,
 }) => {
+  const { setAlertMessage } = useAppStore();
+
   return (
     <div className="flex flex-col gap-3">
       <div className="flex justify-between items-center">
@@ -74,7 +77,7 @@ const ModelConfigEditor: React.FC<ModelConfigEditorProps> = ({
                 parsedCustom = editFormData.custom || {};
               }
             } catch (e) {
-              alert("Invalid JSON in Custom Data");
+              setAlertMessage("Invalid JSON in Custom Data");
               return;
             }
             onSaveEdit(model.model_id, {

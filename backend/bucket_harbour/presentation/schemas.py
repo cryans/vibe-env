@@ -1,7 +1,7 @@
 from pydantic import BaseModel, ConfigDict
 from typing import List, Dict, Any
 from datetime import datetime
-from src.domain.models import FileState
+from bucket_harbour.domain.models import FileState
 
 class TagUpdateRequest(BaseModel):
     tags: List[str]

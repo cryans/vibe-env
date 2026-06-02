@@ -8,6 +8,9 @@ import DirectChatContainer from './components/DirectChatContainer';
 import PiDevSessionsOverview from './components/PiDevSessionsOverview';
 import PiDevSessionDetail from './components/PiDevSessionDetail';
 import ModelsView from './components/ModelsView';
+import DragDropUploader from './components/DragDropUploader'; // Import the new component
+import FileViewer from './components/FileViewer'; // Import the FileViewer component
+import AppFooter from './components/AppFooter'; // Import the new AppFooter component
 
 function App() {
   const {
@@ -46,7 +49,16 @@ function App() {
         {viewMode === 'models' && (
           <ModelsView modelsList={modelsList} />
         )}
+
+        {viewMode === 's3_facade' && (
+          <div className="flex-1 p-4 overflow-auto">
+            <h2 className="text-xl font-bold mb-4">S3 Facade - File Management</h2>
+            <DragDropUploader />
+            <FileViewer />
+          </div>
+        )}
       </div>
+      <AppFooter />
     </div>
   );
 }

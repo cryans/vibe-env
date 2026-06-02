@@ -1,4 +1,5 @@
-from fastapi import FastAPI, HTTPException, Body
+from fastapi import FastAPI, HTTPException, Body, Request
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import llm
@@ -8,8 +9,83 @@ import glob
 from pathlib import Path
 from typing import List, Optional
 import datetime
+import logging
+
+from bucket_harbour.infrastructure.database import init_db
+from bucket_harbour.presentation.routes import router as files_router
 
 app = FastAPI()
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    handlers=[
+        logging.StreamHandler(),  # Log to stdout
+        logging.FileHandler("backend.log")  # Log to a file
+    ]
+)
+
+logger = logging.getLogger(__name__)
+
+def format_exception_chain(exc: Exception) -> str:
+    chain = []
+    current = exc
+    while current is not None:
+        chain.append(f"{type(current).__name__}: {str(current)}")
+        current = current.__cause__ or current.__context__
+    return " -> ".join(chain)
+
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException):
+    chain_str = format_exception_chain(exc)
+    logger.error(
+        f"HTTPException in route {request.method} {request.url.path}: "
+        f"status_code={exc.status_code}, detail={exc.detail} | Exception Chain: {chain_str}"
+    )
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"detail": exc.detail}
+    )
+
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception):
+    chain_str = format_exception_chain(exc)
+    logger.exception(
+        f"Unhandled exception in route {request.method} {request.url.path}: "
+        f"{str(exc)} | Exception Chain: {chain_str}"
+    )
+    return JSONResponse(
+        status_code=500,
+        content={"detail": f"Internal Server Error: {chain_str}"}
+    )
+
+@app.middleware("http")
+async def files_exception_logging_middleware(request: Request, call_next):
+    if request.url.path.startswith("/api/files"):
+        try:
+            response = await call_next(request)
+            if response.status_code >= 400:
+                logger.error(
+                    f"Error response {response.status_code} for files route: "
+                    f"{request.method} {request.url.path}"
+                )
+            return response
+        except Exception as exc:
+            chain_str = format_exception_chain(exc)
+            logger.exception(
+                f"Unhandled exception in files route {request.method} "
+                f"{request.url.path}: {str(exc)} | Exception Chain: {chain_str}"
+            )
+            raise exc
+    return await call_next(request)
+
+# Initialize DB on startup
+@app.on_event("startup")
+def on_startup():
+    init_db()
+
+app.include_router(files_router)
 
 app.add_middleware(
     CORSMiddleware,
@@ -41,12 +117,17 @@ def get_models_config() -> List[dict]:
     try:
         with open(MODELS_FILE, "r") as f:
             return json.load(f)
-    except Exception:
+    except Exception as e:
+        logger.error(f"Failed to load models configuration from {MODELS_FILE}: {e}")
         return []
 
 def save_models_config(config: List[dict]):
-    with open(MODELS_FILE, "w") as f:
-        json.dump(config, f, indent=2)
+    try:
+        with open(MODELS_FILE, "w") as f:
+            json.dump(config, f, indent=2)
+        logger.info(f"Models configuration saved to {MODELS_FILE}")
+    except Exception as e:
+        logger.error(f"Failed to save models configuration to {MODELS_FILE}: {e}")
 
 def get_active_model_config() -> Optional[dict]:
     config = get_models_config()
@@ -81,8 +162,22 @@ class ModelItem(BaseModel):
     log_path: Optional[str] = None
     custom: Optional[dict] = None
 
+class LogRequest(BaseModel):
+    level: str
+    message: str
+    timestamp: str
+
+@app.post("/api/logs")
+async def log_from_ui(request: LogRequest):
+    log_entry = f"[{request.timestamp}] {request.level.upper()}: {request.message}\n"
+    log_file_path = Path("ui_console.log")
+    with open(log_file_path, "a", encoding="utf-8") as f:
+        f.write(log_entry)
+    return {"status": "success"}
+
 @app.post("/api/command", response_model=CommandResponse)
 async def execute_command(request: CommandRequest):
+    logger.info(f"Executing command: {request.command}")
     command = request.command.strip()
     
     if command == "!info":
@@ -101,12 +196,14 @@ async def execute_command(request: CommandRequest):
             ]
             return CommandResponse(response="\n".join(info_lines))
         except Exception as e:
+            logger.error(f"Error retrieving model details for {model_name}: {e}")
             return CommandResponse(response=f"Configured Model: {model_name}\nError retrieving details: {str(e)}")
             
     return CommandResponse(response=f"Unknown command: {command}")
 
 @app.post("/api/chat", response_model=ChatResponse)
 async def chat(request: ChatRequest):
+    logger.info(f"Chat request received for session {request.session_id}: {request.message[:50]}...")
     active_conf = get_active_model_config()
     model_name = get_active_model()
     if not model_name or model_name == "Not configured":
@@ -143,8 +240,10 @@ async def chat(request: ChatRequest):
                 
         return ChatResponse(response=response_text)
     except llm.UnknownModelError:
+        logger.error(f"Unknown model error: {model_name}")
         raise HTTPException(status_code=500, detail=f"Unknown model: {model_name}")
     except Exception as e:
+        logger.error(f"Error during chat for model {model_name}, session {request.session_id}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/models")
@@ -158,8 +257,10 @@ async def get_models():
 
 @app.post("/api/models")
 async def add_model(item: ModelItem):
+    logger.info(f"Attempting to add model: {item.model_id}")
     config = get_models_config()
     if any(m.get("model_id") == item.model_id for m in config):
+        logger.warning(f"Model {item.model_id} already exists.")
         raise HTTPException(status_code=400, detail="Model already exists")
     
     new_model = {
@@ -173,10 +274,12 @@ async def add_model(item: ModelItem):
         new_model["active"] = True
     config.append(new_model)
     save_models_config(config)
+    logger.info(f"Successfully added model: {new_model}")
     return {"status": "success", "model": new_model}
 
 @app.put("/api/models/{model_id:path}")
 async def update_model(model_id: str, item: ModelItem):
+    logger.info(f"Attempting to update model: {model_id}")
     config = get_models_config()
     found = False
     for m in config:
@@ -191,25 +294,32 @@ async def update_model(model_id: str, item: ModelItem):
             break
             
     if not found:
+        logger.warning(f"Model {model_id} not found for update.")
         raise HTTPException(status_code=404, detail="Model not found")
         
     save_models_config(config)
+    logger.info(f"Successfully updated model: {model_id}")
     return {"status": "success"}
 
 @app.delete("/api/models/{model_id:path}")
 async def delete_model(model_id: str):
+    logger.info(f"Attempting to delete model: {model_id}")
     config = get_models_config()
     new_config = [m for m in config if m.get("model_id") != model_id]
     if len(new_config) == len(config):
+        logger.warning(f"Model {model_id} not found for deletion.")
         raise HTTPException(status_code=404, detail="Model not found")
     # If we deleted the active model, make the first one active if available
     if not any(m.get("active") for m in new_config) and new_config:
         new_config[0]["active"] = True
+        logger.info(f"No active model found after deletion, set {new_config[0]['model_id']} as active.")
     save_models_config(new_config)
+    logger.info(f"Successfully deleted model: {model_id}")
     return {"status": "success"}
 
 @app.post("/api/models/select/{model_id:path}")
 async def select_model(model_id: str):
+    logger.info(f"Attempting to select model: {model_id}")
     config = get_models_config()
     found = False
     for m in config:
@@ -219,12 +329,15 @@ async def select_model(model_id: str):
         else:
             m["active"] = False
     if not found:
+        logger.warning(f"Model {model_id} not found for selection.")
         raise HTTPException(status_code=404, detail="Model not found")
     save_models_config(config)
+    logger.info(f"Successfully selected model: {model_id}")
     return {"status": "success", "configured_model": model_id}
 
 @app.get("/api/sessions")
 async def get_sessions():
+    logger.info("Fetching all sessions...")
     sessions = []
     
     # 1. Fetch from standard agent path
@@ -240,7 +353,8 @@ async def get_sessions():
                         data["filepath"] = file_path
                         data["source"] = "pi"
                         sessions.append(data)
-            except Exception:
+            except Exception as e:
+                logger.warning(f"Could not read session file {file_path} from standard path: {e}")
                 pass
                 
     # 2. Fetch from configured model log paths
@@ -272,13 +386,16 @@ async def get_sessions():
                             # Only add if we haven't already (prevent duplicates)
                             if not any(s.get("filepath") == file_path for s in sessions):
                                 sessions.append(data)
-                except Exception:
+                except Exception as e:
+                    logger.warning(f"Could not read session file {file_path} from custom log path: {e}")
                     pass
                     
+    logger.info(f"Found {len(sessions)} sessions.")
     return sorted(sessions, key=lambda x: x.get("timestamp", ""), reverse=True)
 
 @app.get("/api/sessions/{session_id}")
 async def get_session(session_id: str):
+    logger.info(f"Fetching session details for: {session_id}")
     # First check standard path
     base_dir = os.path.expanduser("/workspace/.pi/agent/sessions/--workspace--")
     file_path = os.path.join(base_dir, session_id)
@@ -320,8 +437,10 @@ async def get_session(session_id: str):
         with open(file_path, "r") as f:
             for line in f:
                 lines.append(json.loads(line))
+        logger.info(f"Successfully loaded session {session_id} with {len(lines)} entries.")
         return {"session": lines}
     except Exception as e:
+        logger.error(f"Error reading session file {file_path}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
