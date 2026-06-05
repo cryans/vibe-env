@@ -19,6 +19,10 @@ dependencies = [
 dev = [
     "pytest>=9.0.3",
 ]
+test = [
+    "moto[s3]>=5.2.1",
+    "pyfakefs>=6.2.0",
+]
 
 [build-system]
 requires = ["setuptools>=61.0"]

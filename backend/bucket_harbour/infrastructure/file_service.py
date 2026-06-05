@@ -69,7 +69,7 @@ class FileService:
             filepath,
             S3_BUCKET,
             s3_key,
-            ExtraArgs={"Metadata": {"sha256": checksum}}
+            ExtraArgs={"Metadata": {"checksum": checksum}}
         )
         return checksum
         

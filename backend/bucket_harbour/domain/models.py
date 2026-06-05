@@ -21,8 +21,9 @@ class FileAggregate(Base):
     __tablename__ = "file_aggregates"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    entity_id: Mapped[str] = mapped_column(String, nullable=False)
     current_state: Mapped[FileState] = mapped_column(String(20), default=FileState.STAGED)
-    metadata_json: Mapped[Dict[str, Any]] = mapped_column(JSON, default=dict)
+    metadata_json: Mapped[Dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
     
     audit_logs: Mapped[List["AuditLogEntry"]] = relationship(
         "AuditLogEntry", 
@@ -41,7 +42,7 @@ class FileAggregate(Base):
             self.metadata_json = {
                 "orig_name": payload.get("filename"),
                 "tags": [],
-                "sha256": payload.get("sha256")
+                "checksum": payload.get("checksum")
             }
             
         elif command == "TAG_UPDATE":
@@ -69,7 +70,7 @@ class FileAggregate(Base):
             self.current_state = FileState.PERSISTED
             self.metadata_json = {
                 **self.metadata_json,
-                "sha256": payload.get("checksum")
+                "checksum": payload.get("checksum")
             }
             
         elif command == "DISCARD_EVENT":
@@ -99,11 +100,15 @@ class AuditLogEntry(Base):
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     file_id: Mapped[str] = mapped_column(ForeignKey("file_aggregates.id"), nullable=False)
-    command: Mapped[str] = mapped_column(String(100), nullable=False)
-    payload: Mapped[Dict[str, Any]] = mapped_column(JSON, default=dict)
+    entity_id: Mapped[str] = mapped_column(String, nullable=False)
+    event_id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    previous_event_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
     timestamp: Mapped[datetime.datetime] = mapped_column(
         DateTime(timezone=True), 
         default=lambda: datetime.datetime.now(datetime.timezone.utc)
     )
     
+    command: Mapped[str] = mapped_column(String)
+    event: Mapped[Dict[str, Any]] = mapped_column(JSON, nullable=True)
+    payload: Mapped[Dict[str, Any]] = mapped_column(JSON)
     file: Mapped["FileAggregate"] = relationship("FileAggregate", back_populates="audit_logs")
