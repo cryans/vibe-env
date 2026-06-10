@@ -17,6 +17,7 @@ dependencies = [
 
 [dependency-groups]
 dev = [
+    "ipython>=9.14.1",
     "pyfakefs>=6.2.0",
     "pytest>=9.0.3",
     "ruff>=0.15.16",
