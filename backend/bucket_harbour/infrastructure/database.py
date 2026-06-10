@@ -4,12 +4,15 @@ from sqlalchemy.orm import sessionmaker
 
 from bucket_harbour.domain.models import Base
 
-# Agnostic configuration, but defaulting to a local SQLite database for development
-METADATA_DB_PATH = os.environ.get("METADATA_DB_PATH", "sqlite:///metadata.db")
+DATABASE_URL = os.getenv("DATABASE_URL")
+print(f'{DATABASE_URL}')
+connect_args = {}
+if DATABASE_URL.startswith("sqlite"):
+    connect_args = {"check_same_thread": False}
 
 engine = create_engine(
-    METADATA_DB_PATH, 
-    connect_args={"check_same_thread": False} if METADATA_DB_PATH.startswith("sqlite") else {}
+    DATABASE_URL,
+    connect_args=connect_args
 )
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

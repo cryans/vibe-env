@@ -26,25 +26,9 @@ just up
 
 This command will build and start the MinIO, backend, and frontend services in detached mode.
 
-## Connectivity Matrix
+ 1. Build and Start: Run just up. This will build the new Docker image and start the dev and minio containers.
+ 2. Enter the Dev Shell: Run just vibe (or just pi). This will drop you into a bash shell inside the running dev container.
+ 3. Start Services: From inside the container (or from your host machine), run just start to kick off the backend and frontend servers.
+ 4. Check Logs: Use just logs-backend or just logs-frontend to tail the logs for each service without cluttering your main shell.
+ 5. Start Coding: Launch pi inside the dev container (just vibe then pi). It will now operate in a stable environment, use the correct model, and have all the tools it needs.
 
-This table outlines how different components can connect to each other.
-
-| Component           | Type                | Address/Port           | Notes                                     |
-| :------------------ | :------------------ | :--------------------- | :---------------------------------------- |
-| **Host (WSL2)**     | **Frontend**        | `http://localhost:5174`| Access the React frontend via your browser |
-|                     | **Backend API**     | `http://localhost:8000`| Access the backend API directly           |
-|                     | **MinIO Console**   | `http://localhost:9001`| Access the MinIO web console              |
-|                     | **MinIO API**       | `http://localhost:9000`| For programmatic access                   |
-| **Container**       | **Container-to-Container** |                        | Internal service communication            |
-| `backend`           | `minio`             | `http://minio:9000`    | Backend connects to MinIO API             |
-| `frontend`          | `minio`             | `http://minio:9000`    | Frontend connects to MinIO API            |
-
-## Commands
-
-The `justfile` at the root of this repository provides the following commands:
-
-*   `just up`: Starts all services in detached mode (`docker compose up -d`).
-*   `just down`: Stops and removes all services (`docker compose down`).
-*   `just logs`: Follows the logs of all services (`docker compose logs -f`).
-*   `just` or `just --list`: Lists all available commands.

@@ -8,6 +8,7 @@ import DirectChatContainer from './components/DirectChatContainer';
 import PiDevSessionsOverview from './components/PiDevSessionsOverview';
 import PiDevSessionDetail from './components/PiDevSessionDetail';
 import ModelsView from './components/ModelsView';
+import DataExplorer from './components/DataExplorer';
 import DragDropUploader from './components/DragDropUploader'; // Import the new component
 import FileViewer from './components/FileViewer'; // Import the FileViewer component
 import AppFooter from './components/AppFooter'; // Import the new AppFooter component
@@ -48,6 +49,10 @@ function App() {
 
         {viewMode === 'models' && (
           <ModelsView modelsList={modelsList} />
+        )}
+
+        {viewMode === 'data_explorer' && (
+          <DataExplorer />
         )}
 
         {viewMode === 's3_facade' && (

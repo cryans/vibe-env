@@ -1,22 +1,21 @@
 # backend/tests/application/test_file_application_service.py
 
 import unittest
-import tempfile
 import os
 import hashlib
-from typing import BinaryIO, Tuple, Protocol, Any, List
+from typing import BinaryIO, Tuple, Any
 from io import BytesIO
 from uuid import uuid4
-from datetime import datetime # Import datetime
 
-from sqlalchemy import create_engine, Column, String, DateTime, ForeignKey, JSON
-from sqlalchemy.orm import sessionmaker, Session
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
 
 # --- Real Application Code Imports ---
 # These imports are now relative to the `backend` directory, where pytest is run.
 from bucket_harbour.domain.models import Base, FileAggregate, AuditLogEntry, FileState
 from bucket_harbour.application.file_application_service import FileApplicationService, IFileService
 
+from pyfakefs.fake_filesystem_unittest import TestCase as FakeFilesystemTestCase
 
 # --- Test Infrastructure: TestableFileService ---
 # This class is a test-specific helper and remains in the test file.
@@ -85,10 +84,6 @@ class TestableFileService:
         
         return calculated_checksum
 
-# --- Test Class for FileApplicationService Isolation ---
-from pyfakefs.fake_filesystem_unittest import TestCase as FakeFilesystemTestCase
-from moto import mock_aws
-import boto3 # Ensure boto3 is imported
 
 class TestFileApplicationService(FakeFilesystemTestCase):
 
@@ -430,7 +425,7 @@ class TestFileApplicationService(FakeFilesystemTestCase):
     def test_get_files_by_state(self):
         """Tests retrieving files based on their state."""
         # Create files in different states
-        file_staged_initial = self._create_file_aggregate(state=FileState.STAGED)
+        self._create_file_aggregate(state=FileState.STAGED)
         file_staged1 = self._create_file_aggregate(state=FileState.STAGED)
         file_staged2 = self._create_file_aggregate(state=FileState.STAGED)
         file_persisted = self._create_file_aggregate(state=FileState.PERSISTED)

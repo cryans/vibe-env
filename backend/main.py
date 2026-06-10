@@ -1,5 +1,5 @@
-from fastapi import FastAPI, HTTPException, Body, Request
-from fastapi.responses import JSONResponse
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import JSONResponse, HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import llm
@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import List, Optional
 import datetime
 import logging
+import sqlite3
 
 from bucket_harbour.infrastructure.database import init_db
 from bucket_harbour.presentation.routes import router as files_router
@@ -442,6 +443,38 @@ async def get_session(session_id: str):
     except Exception as e:
         logger.error(f"Error reading session file {file_path}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+# ...
+@app.get("/api/data/explorer", response_class=HTMLResponse)
+async def get_data_explorer(limit: int = 50, offset: int = 0):
+    conn = sqlite3.connect('data.db')
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM data_table LIMIT ? OFFSET ?", (limit, offset))
+    rows = cursor.fetchall()
+    
+    # Get column names
+    cursor.execute("PRAGMA table_info(data_table)")
+    columns = [col[1] for col in cursor.fetchall()]
+    conn.close()
+    
+    # Return HTML rows for HTMX
+    html = ""
+    for row in rows:
+        html += "<tr>"
+        for val in row:
+            html += f"<td class='px-4 py-2 border'>{val}</td>"
+        html += "</tr>"
+    
+    # Add a sentinel row that triggers the next load
+    next_offset = offset + limit
+    html += f"""
+    <tr hx-get="/api/data/explorer?limit={limit}&offset={next_offset}"
+        hx-trigger="revealed"
+        hx-swap="outerHTML">
+        <td colspan="{len(columns)}" class="text-center py-2">Loading more...</td>
+    </tr>
+    """
+    return html
 
 if __name__ == "__main__":
     import uvicorn

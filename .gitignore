@@ -1,3 +1,6 @@
+# File to store process ids so shell scripts can stop processes
+*.pid
+
 .env
 models.json
 backend/logs.jsonl

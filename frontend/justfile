@@ -1,0 +1,10 @@
+default:
+    @just -l
+
+# Start the Vite development server in the foreground
+dev:
+    npm run dev -- --host 0.0.0.0 --port 5173
+
+# Install or clean-install frontend dependencies
+install:
+    npm ci

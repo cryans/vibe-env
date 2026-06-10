@@ -68,6 +68,13 @@ const Sidebar: React.FC = () => {
           <span>Models</span>
         </button>
         <button
+          onClick={() => setViewMode('data_explorer')}
+          className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${viewMode === 'data_explorer' ? 'bg-blue-100 text-blue-700' : 'hover:bg-gray-200 text-gray-700'}`}
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><path d="M3 3h18v18H3zM3 9h18M9 3v18"/></svg>
+          <span>Data Explorer</span>
+        </button>
+        <button
           onClick={() => setViewMode('s3_facade')}
           className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${viewMode === 's3_facade' ? 'bg-blue-100 text-blue-700' : 'hover:bg-gray-200 text-gray-700'}`}
         >

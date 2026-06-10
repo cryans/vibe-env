@@ -1,8 +1,7 @@
 
-from typing import BinaryIO, List, Optional, Protocol, Tuple, Any
+from typing import BinaryIO, List, Optional, Protocol, Tuple
 from sqlalchemy.orm import Session
-from bucket_harbour.domain.models import FileAggregate, AuditLogEntry, FileState, Base # Assuming Base is also in models
-from bucket_harbour.infrastructure.file_service import FileService # This is the *actual* implementation, we will replace its usage with a protocol
+from bucket_harbour.domain.models import FileAggregate, AuditLogEntry, FileState # Assuming Base is also in models
 import uuid # Import uuid for event_id generation
 
 # Define the FileService Protocol

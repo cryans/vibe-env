@@ -3,7 +3,7 @@ from fastapi.responses import RedirectResponse
 from datetime import datetime
 from sqlalchemy.orm import Session
 from bucket_harbour.infrastructure.database import get_db
-from bucket_harbour.domain.models import FileAggregate, AuditLogEntry, FileState
+from bucket_harbour.domain.models import FileState
 from bucket_harbour.infrastructure.file_service import FileService
 from bucket_harbour.application.file_application_service import FileApplicationService
 from bucket_harbour.presentation.schemas import (
@@ -77,7 +77,7 @@ def get_download_link(id: str, service: FileApplicationService = Depends(get_fil
         raise HTTPException(status_code=400, detail="File is not persisted yet")
         
     try:
-        url = file_service.generate_presigned_url(id)
+        url = service.generate_presigned_url(id)
         return {"download_url": url}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to generate download URL: {str(e)}")
@@ -109,7 +109,6 @@ def get_file_events(id: str, service: FileApplicationService = Depends(get_file_
 
 @router.post("/{id}/replay", response_model=FileAggregateResponse)
 def replay_file_events(id: str, service: FileApplicationService = Depends(get_file_application_service)):
-    service = FileApplicationService(db, file_service)
     try:
         return service.reconstruct_from_history(id)
     except ValueError as e:
@@ -127,7 +126,7 @@ def download_file_direct(id: str, service: FileApplicationService = Depends(get_
         raise HTTPException(status_code=400, detail="File is not persisted yet")
         
     try:
-        url = file_service.generate_presigned_url(id)
+        url = service.generate_presigned_url(id)
         return RedirectResponse(url=url)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to generate download URL: {str(e)}")

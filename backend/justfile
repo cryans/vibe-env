@@ -1,0 +1,33 @@
+set shell := ["/bin/bash", "-c"]
+
+default:
+    @just -l
+
+# Start the FastAPI/Uvicorn server in the foreground
+dev:
+    uv run uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+
+# Start the FastAPI/Uvicorn server in the background and log to a file
+dev-bg:
+    @echo "Starting backend in background..."
+    @uv run uvicorn main:app --host 0.0.0.0 --port 8000 --reload > backend.log 2>&1 & echo $! > backend.pid
+    @echo "Backend running in background (PID: $(cat backend.pid)). Logs: backend.log"
+
+# Stop the background backend process
+stop-bg:
+    PID=$(cat backend.pid); \
+    kill $PID; \
+    rm backend.pid; \
+    echo "Backend PID: $$PID stopped.";
+
+# Tail the logs
+logs:
+    @tail -f backend.log
+
+# Run backend test suite
+test:
+    uv run pytest
+
+# Sync Python dependencies using uv
+sync:
+    uv sync

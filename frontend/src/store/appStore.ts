@@ -17,7 +17,7 @@ export interface SessionInfo {
   title?: string;
 }
 
-export type ViewMode = 'direct_chat' | 'pidev_sessions' | 'pidev_session_detail' | 'models' | 's3_facade';
+export type ViewMode = 'direct_chat' | 'pidev_sessions' | 'pidev_session_detail' | 'models' | 's3_facade' | 'data_explorer';
 
 export interface ModelConfig {
   model_id: string;
